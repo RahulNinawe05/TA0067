@@ -21,12 +21,10 @@ import requests
 
 load_dotenv()
 
-# ------------------- 1. LLM + Embeddings -------------------
 api_key = os.getenv('GROQ_API_KEY')
 llm = ChatGroq(model="openai/gpt-oss-20b", api_key=api_key)
 embeddings = HuggingFaceEmbeddings()
 
-# ------------------- 2. PDF Retriever Store -------------------
 _THREAD_RETRIEVERS: Dict[str, Any] = {}
 _THREAD_METADATA: Dict[str, dict] = {}
 
@@ -59,7 +57,6 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
         try: os.remove(temp_path)
         except OSError: pass
 
-# ------------------- 3. Tools -------------------
 search_tool = DuckDuckGoSearchRun(region="us-en")
 
 @tool
@@ -112,7 +109,6 @@ llm_with_tools = llm.bind_tools(tools)
 class ChatState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
-# ------------------- 5. Chat Node -------------------
 def chat_node(state: ChatState, config=None):
     thread_id = None
     if config and isinstance(config, dict):
@@ -133,11 +129,9 @@ def chat_node(state: ChatState, config=None):
 
 tool_node = ToolNode(tools)
 
-# ------------------- 6. Checkpointer -------------------
 conn = sqlite3.connect(database="chatbot.db", check_same_thread=False)
 checkpointer = SqliteSaver(conn=conn)
 
-# ------------------- 7. Graph -------------------
 graph = StateGraph(ChatState)
 graph.add_node("chat_node", chat_node)
 graph.add_node("tools", tool_node)
@@ -146,7 +140,6 @@ graph.add_conditional_edges("chat_node", tools_condition)
 graph.add_edge("tools", "chat_node")
 chatbot = graph.compile(checkpointer=checkpointer)
 
-# ------------------- 8. Helpers -------------------
 def retrieve_all_threads():
     return list({c.config["configurable"]["thread_id"] for c in checkpointer.list(None)})
 
